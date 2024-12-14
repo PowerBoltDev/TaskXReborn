@@ -1,17 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Import everything we need once
 import "./index.css";
 
 const TaskXApp = () => {
   // State to manage tasks
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState({
-    //I think this is the input from the user as a string??
     title: "",
     description: "",
     priority: "medium",
     dueDate: "",
     timeSpent: 0,
     status: "note-started",
+  });
+
+  const [activeTimer, setActiveTimer] = useState({
+    taskId: null,
+    isRunning: false,
+    startTime: null,
+    elapsedTime: 0,
   });
 
   //Task Creation
@@ -36,6 +42,50 @@ const TaskXApp = () => {
         status: "not-started",
       });
     }
+  };
+
+  useEffect(() => {
+    let intervalId;
+
+    if (activeTimer.isRunning) {
+      //Start counting by the second
+      intervalId = setInterval(() => {
+        setActiveTimer((prev) => ({
+          ...prev,
+          elapsedTime: Date.now() - prev.startTime,
+        }));
+      }, 1000);
+    }
+    return () => clearInterval(intervalId);
+  }, [activeTimer.isRunning]);
+
+  //function to start timing the task
+  const startTimer = (taskId) => {
+    setActiveTimer({
+      taskId: taskId,
+      isRunning: true,
+      startTime: Date.now() - (activeTimer.elapsedTime || 0),
+      elapsedTime: activeTimer.elapsedTime || 0,
+    });
+  };
+
+  //function to pause the task
+  const pauseTimer = () => {
+    setActiveTimer((prev) => ({
+      ...prev,
+      isRunning: false,
+    }));
+  };
+  //Helper Function to make time readable
+  const formatTime = (milliseconds) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -112,9 +162,31 @@ const TaskXApp = () => {
                   <p className="text-gray-400"> Due: {task.dueDate}</p>
                 )}
               </div>
-              <button className="bg-red-600 hover:bg-red-700 p-2 text-white rounded">
-                Start Timer
-              </button>
+              <div className="flex space-x-2">
+                {/* Timer Display */}
+                <p className="text-white mr-4">
+                  Time:{" "}
+                  {formatTime(
+                    activeTimer.taskId === task.id ? activeTimer.elapsedTime : 0
+                  )}
+                </p>
+                {/* Timer Controls */}
+                {activeTimer.taskId !== task.id || !activeTimer.isRunning ? (
+                  <button
+                    onClick={() => startTimer(task.id)}
+                    className="bg-green-600 hover:bg-green-700 p-2 text-white rounded"
+                  >
+                    Start Timer
+                  </button>
+                ) : (
+                  <button
+                    onClick={pauseTimer}
+                    className="bg-yellow-600 hover:bg-yellow-700 p-2 text-white rounded"
+                  >
+                    Pause Timer
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}
